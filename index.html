@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Bank - 時間信用卡</title>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- SheetJS for Excel/CSV Parsing -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+body {
+font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+background-color: #0f172a;
+color: #f8fafc;
+}
+.card-gradient-positive {
+background: linear-gradient(135deg, #059669 0%, #10b981 50%, #047857 100%);
+}
+.card-gradient-negative {
+background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #b91c1c 100%);
+}
+</style>
+</head>
+<body class="min-h-screen pb-12">
+<!-- Top Header -->
+<header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+<div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<div class="bg-indigo-600 p-2 rounded-xl text-white">
+<i data-lucide="credit-card" class="w-6 h-6"></i>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tight">Time Bank</h1>
+<p class="text-xs text-slate-400">時間信用卡與透支管理系統</p>
+</div>
+</div>
+<button onclick="resetData()" class="text-xs text-slate-400 hover:text-rose-400 transition flex items-center gap-1">
+<i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 重置數據
+</button>
+</div>
+</header>
+<main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+<!-- Credit Card Balance Display -->
+<div id="creditCard" class="card-gradient-positive rounded-3xl p-6 md:p-8 text-white shadow-2xl transition-all duration-500 relative overflow-hidden">
+<div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="text-xs uppercase tracking-widest text-white/80 font-bold">Time Credit Account</span>
+<h2 class="text-xs text-white/70">專注兌換率：<span id="ratioDisplay" class="font-bold text-white">5 : 1</span> (20%)</h2>
+</div>
+<div class="px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold tracking-wider flex items-center gap-1" id="statusBadge">
+<i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 信用正常
+</div>
+</div>
+<div class="my-4">
+<div class="text-xs text-white/80 font-medium mb-1" id="balanceLabel">可用娛樂時間餘額 (Available Time)</div>
+<div class="flex items-baseline space-x-2">
+<span id="balanceDisplay" class="text-4xl md:text-5xl font-black tracking-tight">+0</span>
+<span class="text-lg font-bold text-white/90">分鐘</span>
+</div>
+<div id="debtWarning" class="hidden mt-2 text-xs bg-black/30 border border-white/20 p-2.5 rounded-xl text-white/90">
+⚠️ 警示：你目前已透支娛樂時間！請在接下來的專注中將負債平帳。
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-white/20 text-xs">
+<div>
+<div class="text-white/70">總累計專注時間</div>
+<div id="totalFocusDisplay" class="text-base font-bold">0 分鐘</div>
+</div>
+<div>
+<div class="text-white/70">總累計娛樂消耗</div>
+<div id="totalEntDisplay" class="text-base font-bold">0 分鐘</div>
+</div>
+</div>
+</div>
+<!-- Action Panel Tabs -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Deposit / Focus Log -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-lg">
+<div class="flex items-center space-x-2 border-b border-slate-800 pb-3">
+<div class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
+<i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+</div>
+<h3 class="font-bold text-slate-200">專注時間儲值 (Earn Credit)</h3>
+</div>
+<!-- Excel / CSV Upload Area -->
+<div class="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl p-4 text-center transition cursor-pointer relative bg-slate-950/50" id="dropZone">
+<input type="file" id="excelInput" accept=".csv, .xlsx, .xls" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+<i data-lucide="file-spreadsheet" class="w-8 h-8 text-slate-500 mx-auto mb-2"></i>
+<p class="text-xs text-slate-300 font-semibold">上傳番茄鐘 Excel / CSV 檔案</p>
+<p class="text-[10px] text-slate-500 mt-1">點擊或拖曳檔案至此，自動解析專注分鐘數</p>
+</div>
+<div class="relative flex py-1 items-center">
+<div class="flex-grow border-t border-slate-800"></div>
+<span class="flex-shrink mx-3 text-xs text-slate-500 font-medium">或 手動填入</span>
+<div class="flex-grow border-t border-slate-800"></div>
+</div>
+<div class="space-y-3">
+<div>
+<label class="block text-xs font-medium text-slate-400 mb-1">專注內容 / 項目</label>
+<input type="text" id="focusNote" placeholder="例如：圖書館溫書 3 小時" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-400 mb-1">專注時間（分鐘）</label>
+<input type="number" id="focusMinutes" placeholder="例如：180" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+</div>
+<button onclick="addFocusTime()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2">
+<i data-lucide="plus-circle" class="w-4 h-4"></i> 儲值時間信用
+</button>
+</div>
+</div>
+<!-- Withdraw / Entertainment Log -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-lg">
+<div class="flex items-center space-x-2 border-b border-slate-800 pb-3">
+<div class="p-1.5 bg-rose-500/10 text-rose-400 rounded-lg">
+<i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+</div>
+<h3 class="font-bold text-slate-200">娛樂時間扣款 (Use Entertainment)</h3>
+</div>
+<div class="space-y-3">
+<div>
+<label class="block text-xs font-medium text-slate-400 mb-1">娛樂平台 / 管道</label>
+<select id="entSource" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500">
+<option value="YouTube">YouTube</option>
+<option value="Instagram">Instagram</option>
+<option value="Netflix / 影集">Netflix / 影集</option>
+<option value="手機遊戲">手機遊戲</option>
+<option value="其他娛樂">其他娛樂</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-400 mb-1">實際使用時間（分鐘）</label>
+<input type="number" id="entMinutes" placeholder="例如：36" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500">
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-400 mb-1">備註說明（可選）</label>
+<input type="text" id="entNote" placeholder="例如：晚上看教學與休閒影片" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-rose-500">
+</div>
+<button onclick="addEntTime()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-2">
+<i data-lucide="minus-circle" class="w-4 h-4"></i> 紀錄娛樂消費
+</button>
+</div>
+</div>
+</div>
+<!-- Ledger History -->
+<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+<div class="flex justify-between items-center border-b border-slate-800 pb-3">
+<h3 class="font-bold text-slate-200 flex items-center gap-2">
+<i data-lucide="history" class="w-4 h-4 text-indigo-400"></i> 時間交易歷史明細
+</h3>
+<span class="text-xs text-slate-500" id="txCount">共 0 筆紀錄</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="text-slate-500 border-b border-slate-800">
+<th class="pb-2">時間</th>
+<th class="pb-2">類型</th>
+<th class="pb-2">項目 / 管道</th>
+<th class="pb-2 text-right">原始時間</th>
+<th class="pb-2 text-right">信用變動 (5:1)</th>
+</tr>
+</thead>
+<tbody id="txHistory" class="divide-y divide-slate-800/50 text-slate-300">
+<!-- Dynamic Logs -->
+</tbody>
+</table>
+</div>
+</div>
+</main>
+<script>
+// State Management with localStorage
+let state = JSON.parse(localStorage.getItem('timeBankState')) || {
+ratio: 5,
+balance: 0,
+totalFocus: 0,
+totalEnt: 0,
+transactions: []
+};
+function saveState() {
+localStorage.setItem('timeBankState', JSON.stringify(state));
+updateUI();
+}
+function updateUI() {
+const card = document.getElementById('creditCard');
+const balanceDisplay = document.getElementById('balanceDisplay');
+const balanceLabel = document.getElementById('balanceLabel');
+const statusBadge = document.getElementById('statusBadge');
+const debtWarning = document.getElementById('debtWarning');
+// Format Balance
+const balance = Math.round(state.balance);
+balanceDisplay.innerText = balance > 0 ? ⁠+${balance}⁠ : balance;
+document.getElementById('totalFocusDisplay').innerText = ⁠${state.totalFocus} 分鐘⁠;
+document.getElementById('totalEntDisplay').innerText = ⁠${state.totalEnt} 分鐘⁠;
+document.getElementById('txCount').innerText = ⁠共 ${state.transactions.length} 筆紀錄⁠;
+// Negative Debt handling
+if (balance < 0) {
+card.className = "card-gradient-negative rounded-3xl p-6 md:p-8 text-white shadow-2xl transition-all duration-500 relative overflow-hidden";
+balanceLabel.innerText = "透支負債額度 (Time Debt)";
+statusBadge.innerHTML = ⁠<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> 信用透支⁠;
+statusBadge.className = "px-3 py-1 bg-black/30 backdrop-blur rounded-full text-xs font-semibold tracking-wider text-rose-200 flex items-center gap-1";
+debtWarning.classList.remove('hidden');
+} else {
+card.className = "card-gradient-positive rounded-3xl p-6 md:p-8 text-white shadow-2xl transition-all duration-500 relative overflow-hidden";
+balanceLabel.innerText = "可用娛樂時間餘額 (Available Time)";
+statusBadge.innerHTML = ⁠<i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 信用良好⁠;
+statusBadge.className = "px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold tracking-wider text-emerald-100 flex items-center gap-1";
+debtWarning.classList.add('hidden');
+}
+// Render Table Logs
+const historyBody = document.getElementById('txHistory');
+historyBody.innerHTML = '';
+if (state.transactions.length === 0) {
+historyBody.innerHTML = ⁠<tr><td colspan="5" class="py-4 text-center text-slate-500">尚無交易紀錄</td></tr>⁠;
+} else {
+[...state.transactions].reverse().forEach(tx => {
+const isFocus = tx.type === 'focus';
+const tr = document.createElement('tr');
+tr.className = "hover:bg-slate-800/30 transition";
+tr.innerHTML = ⁠<td class="py-2.5 font-mono text-slate-400">${tx.date}</td> <td class="py-2.5"> <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isFocus ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}"> ${isFocus ? '專注儲值' : '娛樂消費'} </span> </td> <td class="py-2.5 font-medium text-slate-200">${tx.title}</td> <td class="py-2.5 text-right font-mono">${tx.rawMinutes} m</td> <td class="py-2.5 text-right font-mono font-bold ${isFocus ? 'text-emerald-400' : 'text-rose-400'}"> ${isFocus ? '+' : ''}${tx.creditChange} m </td>⁠;
+historyBody.appendChild(tr);
+});
+}
+lucide.createIcons();
+}
+// Add Focus Time
+function addFocusTime() {
+const noteInput = document.getElementById('focusNote');
+const minInput = document.getElementById('focusMinutes');
+const rawMins = parseFloat(minInput.value);
+const title = noteInput.value.trim() || '專注學習/溫書';
+if (!rawMins || rawMins <= 0) {
+alert('請輸入有效的專注分鐘數！');
+return;
+}
+const earnedCredit = Math.round((rawMins / state.ratio) * 10) / 10;
+state.balance += earnedCredit;
+state.totalFocus += rawMins;
+state.transactions.push({
+id: Date.now(),
+date: new Date().toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+type: 'focus',
+title: title,
+rawMinutes: rawMins,
+creditChange: earnedCredit
+});
+noteInput.value = '';
+minInput.value = '';
+saveState();
+}
+// Add Entertainment Time
+function addEntTime() {
+const sourceSelect = document.getElementById('entSource');
+const minInput = document.getElementById('entMinutes');
+const noteInput = document.getElementById('entNote');
+const rawMins = parseFloat(minInput.value);
+const source = sourceSelect.value;
+const note = noteInput.value.trim();
+const title = note ? ⁠${source} (${note})⁠ : source;
+if (!rawMins || rawMins <= 0) {
+alert('請輸入有效的娛樂分鐘數！');
+return;
+}
+state.balance -= rawMins;
+state.totalEnt += rawMins;
+state.transactions.push({
+id: Date.now(),
+date: new Date().toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+type: 'ent',
+title: title,
+rawMinutes: rawMins,
+creditChange: -rawMins
+});
+minInput.value = '';
+noteInput.value = '';
+saveState();
+}
+// Handle Excel Parsing (SheetJS)
+document.getElementById('excelInput').addEventListener('change', function(e) {
+const file = e.target.files[0];
+if (!file) return;
+const reader = new FileReader();
+reader.onload = function(e) {
+try {
+const data = new Uint8Array(e.target.result);
+const workbook = XLSX.read(data, {type: 'array'});
+const firstSheetName = workbook.SheetNames[0];
+const worksheet = workbook.Sheets[firstSheetName];
+const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+// Search for numeric values that look like focus duration in minutes
+let foundTotalMinutes = 0;
+json.forEach(row => {
+row.forEach(cell => {
+if (typeof cell === 'number' && cell > 0 && cell < 1440) {
+foundTotalMinutes += cell;
+}
+});
+});
+if (foundTotalMinutes > 0) {
+document.getElementById('focusMinutes').value = Math.round(foundTotalMinutes);
+document.getElementById('focusNote').value = ⁠匯入檔案: ${file.name}⁠;
+alert(⁠成功解析檔案！找到約 ${Math.round(foundTotalMinutes)} 分鐘專注時間。點擊「儲值時間信用」即可存入帳戶。⁠);
+} else {
+alert('成功讀取檔案，但未能自動提取到明確的時間數值。請直接手動輸入分鐘數。');
+}
+} catch (err) {
+alert('讀取檔案失敗，請確認上傳的是正確的 CSV 或 Excel 檔案。');
+}
+};
+reader.readAsArrayBuffer(file);
+});
+// Reset Data
+function resetData() {
+if (confirm('確定要清空所有資料與交易歷史嗎？這項動作無法復原。')) {
+state = { ratio: 5, balance: 0, totalFocus: 0, totalEnt: 0, transactions: [] };
+saveState();
+}
+}
+// Initialize UI
+updateUI();
+</script>
+</body>
+</html>

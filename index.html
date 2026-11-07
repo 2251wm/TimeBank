@@ -3,55 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Time Bank 信用卡</title>
+    <title>Time Bank 信用卡 v3.0</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
+    <!-- 引入 OCR 辨識庫用於解析截圖 -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 16px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { font-size: 20px; font-weight: bold; color: #10b981; }
-        .sub-title { font-size: 12px; color: #94a3b8; }
-        .btn-reset { background: none; border: none; color: #64748b; font-size: 12px; cursor: pointer; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        h1 { font-size: 18px; font-weight: bold; color: #10b981; }
+        .sub-title { font-size: 11px; color: #94a3b8; }
+        .btn-reset { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
         
-        .card { border-radius: 16px; padding: 24px; margin-bottom: 20px; transition: all 0.3s ease; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
+        .card { border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: all 0.3s ease; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
         .card-credit { background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); border: 1px solid #065f46; }
         .card-debt { background: linear-gradient(135deg, #7f1d1d 0%, #451a03 100%); border: 1px solid #991b1b; }
-        .card-top { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .card-top { display: flex; justify-content: space-between; margin-bottom: 16px; }
         .card-label { font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
-        .card-status { font-size: 12px; font-weight: bold; margin-top: 4px; }
+        .card-status { font-size: 12px; font-weight: bold; margin-top: 2px; }
         .status-ok { color: #34d399; }
         .status-debt { color: #f87171; }
-        .card-balance { font-size: 40px; font-weight: 800; }
-        .card-unit { font-size: 14px; color: #94a3b8; margin-left: 4px; }
-        .card-footer { display: flex; justify-content: space-between; margin-top: 20px; font-size: 11px; font-family: monospace; color: #94a3b8; }
+        .card-balance { font-size: 36px; font-weight: 800; }
+        .card-unit { font-size: 13px; color: #94a3b8; margin-left: 4px; }
+        .card-footer { display: flex; justify-content: space-between; margin-top: 16px; font-size: 10px; font-family: monospace; color: #94a3b8; }
         
-        .tab-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-        .tab-btn { padding: 12px; border-radius: 12px; font-weight: bold; border: none; cursor: pointer; font-size: 14px; }
+        .tab-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+        .tab-btn { padding: 10px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 13px; }
         .tab-active-dep { background-color: #059669; color: white; }
         .tab-active-with { background-color: #e11d48; color: white; }
         .tab-inactive { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; }
         
-        .panel { background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
-        .panel-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #cbd5e1; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
-        input[type="number"], input[type="file"] { width: 100%; background-color: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; font-size: 14px; outline: none; }
-        input[type="number"]:focus { border-color: #10b981; }
-        .btn-action { padding: 10px 16px; border-radius: 8px; border: none; font-weight: bold; font-size: 14px; cursor: pointer; whitespace-nowrap: nowrap; }
+        .panel { background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; padding: 14px; border-radius: 12px; margin-bottom: 12px; }
+        .panel-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #cbd5e1; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+        input[type="text"], input[type="number"], input[type="file"], input[type="date"] { width: 100%; background-color: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none; }
+        input[type="number"]:focus, input[type="text"]:focus { border-color: #10b981; }
+        .btn-action { padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; text-align: center; }
         .btn-dep { background-color: #059669; color: white; }
         .btn-with { background-color: #e11d48; color: white; }
-        .quick-btns { display: flex; gap: 8px; }
-        .btn-quick { background-color: #334155; border: 1px solid #475569; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; flex: 1; }
+        .quick-btns { display: flex; gap: 6px; }
+        .btn-quick { background-color: #334155; border: 1px solid #475569; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; flex: 1; }
         
-        .history-title { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
-        .history-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .history-item { display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 8px; border: 1px solid #334155; font-size: 12px; }
+        .history-title { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .history-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.5); padding: 8px 12px; border-radius: 8px; border: 1px solid #334155; font-size: 12px; }
         .item-dep { color: #34d399; font-weight: bold; }
         .item-with { color: #f87171; font-weight: bold; }
+        .item-title { font-weight: 600; color: #f1f5f9; }
         .item-time { font-size: 10px; color: #64748b; margin-top: 2px; }
         .hidden { display: none !important; }
+        .ocr-status { font-size: 11px; color: #38bdf8; margin-top: 6px; }
+        
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: flex; items-center: center; justify-content: center; p: 16px; z-index: 100; }
+        .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 20px; width: 90%; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -59,11 +67,12 @@
     <header>
         <div>
             <h1>💳 時間銀行 Time Bank</h1>
-            <div class="sub-title">自律遊戲化 5:1 額度管理</div>
+            <div class="sub-title">Tomatodo ＋ 螢幕截圖識別 (5:1)</div>
         </div>
-        <button onclick="resetData()" class="btn-reset">重設資料</button>
+        <button onclick="openResetModal()" class="btn-reset">⚙️ 重設數據</button>
     </header>
 
+    <!-- 信用卡卡片 -->
     <div id="card" class="card card-credit">
         <div class="card-top">
             <div>
@@ -84,49 +93,89 @@
         </div>
     </div>
 
+    <!-- 頁籤按鈕 -->
     <div class="tab-group">
         <button id="btnTabDep" onclick="showTab('deposit')" class="tab-btn tab-active-dep">➕ 專注儲值 (存款)</button>
         <button id="btnTabWith" onclick="showTab('withdraw')" class="tab-btn tab-inactive">➖ 娛樂消費 (扣款)</button>
     </div>
 
+    <!-- 面板 1：存款 -->
     <div id="panelDeposit">
         <div class="panel">
-            <div class="panel-title">📁 匯入番茄鐘 CSV / Excel 報表</div>
-            <input type="file" id="csvFileInput" accept="*/*" onchange="handleFileUpload(event)">
+            <div class="panel-title">📁 匯入 Tomatodo 報表 (.xls / .csv)</div>
+            <input type="file" id="csvFileInput" accept=".xls,.csv,*/*" onchange="handleFileUpload(event)">
         </div>
 
         <div class="panel">
-            <div class="panel-title">✍️ 手動輸入專注時間</div>
+            <div class="panel-title">✍️ 手動輸入專注項目</div>
             <div class="input-group">
-                <input type="number" id="focusInput" placeholder="例如：180 (分鐘)">
+                <input type="text" id="focusNameInput" placeholder="項目名稱 (例如：溫數學)">
+                <input type="number" id="focusInput" placeholder="專注分鐘數 (例如：180)">
                 <button onclick="addFocusManual()" class="btn-action btn-dep">換算儲值</button>
             </div>
             <div class="quick-btns">
-                <button onclick="quickAddFocus(30)" class="btn-quick">+30 分鐘</button>
-                <button onclick="quickAddFocus(60)" class="btn-quick">+1 小時</button>
-                <button onclick="quickAddFocus(180)" class="btn-quick">+3 小時 (換36m)</button>
+                <button onclick="quickAddFocus(30)" class="btn-quick">+30分</button>
+                <button onclick="quickAddFocus(60)" class="btn-quick">+1小時</button>
+                <button onclick="quickAddFocus(180)" class="btn-quick">+3小時</button>
             </div>
         </div>
     </div>
 
+    <!-- 面板 2：扣款 (含截圖 OCR 上傳) -->
     <div id="panelWithdraw" class="hidden">
         <div class="panel">
-            <div class="panel-title">🎬 輸入使用娛樂 App 的總分鐘數</div>
+            <div class="panel-title">📸 自動解析螢幕使用時間截圖</div>
+            <input type="file" id="imgFileInput" accept="image/*" onchange="handleImageUpload(event)">
+            <div id="ocrStatus" class="ocr-status hidden">正在分析截圖中，請稍候...</div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title">🎬 手動輸入娛樂消費</div>
             <div class="input-group">
-                <input type="number" id="entertainmentInput" placeholder="例如：45 (分鐘)">
+                <input type="text" id="entNameInput" placeholder="娛樂項目 (例如：YouTube / IG)">
+                <input type="number" id="entertainmentInput" placeholder="使用分鐘數 (例如：45)">
                 <button onclick="addEntertainmentManual()" class="btn-action btn-with">進行扣除</button>
             </div>
             <div class="quick-btns">
-                <button onclick="quickAddEnt(15)" class="btn-quick">-15 分鐘</button>
-                <button onclick="quickAddEnt(30)" class="btn-quick">-30 分鐘</button>
-                <button onclick="quickAddEnt(60)" class="btn-quick">-1 小時</button>
+                <button onclick="quickAddEnt(15)" class="btn-quick">-15分</button>
+                <button onclick="quickAddEnt(30)" class="btn-quick">-30分</button>
+                <button onclick="quickAddEnt(60)" class="btn-quick">-1小時</button>
             </div>
         </div>
     </div>
 
+    <!-- 歷史紀錄 -->
     <div>
-        <div class="history-title">交易帳單明細</div>
+        <div class="history-title">
+            <span>詳細交易明細</span>
+            <span id="historyCount" style="font-weight:normal; font-size:10px;">0 筆紀錄</span>
+        </div>
         <div id="historyList" class="history-list"></div>
+    </div>
+
+    <!-- 清除歷史紀錄 Modal -->
+    <div id="resetModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#f87171;">⚠️ 重設與歷史紀錄管理</h3>
+            <p style="font-size:12px; color:#cbd5e1; margin-bottom:16px;">為了避免資料過多，你可以選擇清理特定日期前的舊明細，或完全重設：</p>
+            
+            <div style="margin-bottom:16px;">
+                <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:4px;">清理此日期之前的舊明細：</label>
+                <input type="date" id="resetBeforeDate">
+                <button onclick="clearHistoryBeforeDate()" style="width:100%; margin-top:8px; padding:8px; background:#334155; border:1px solid #475569; color:white; border-radius:6px; font-size:12px; cursor:pointer;">
+                    🗑️ 清除該日期前的舊歷史 (保留當前餘額)
+                </button>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid #334155; margin:16px 0;">
+            
+            <button onclick="fullResetAccount()" style="width:100%; padding:8px; background:#7f1d1d; border:1px solid #991b1b; color:white; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+                🔥 完全清空所有資料與餘額 (需再次二次確認)
+            </button>
+            <button onclick="closeResetModal()" style="width:100%; margin-top:8px; padding:8px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
+                取消
+            </button>
+        </div>
     </div>
 
     <script>
@@ -138,8 +187,10 @@
             const card = document.getElementById('card');
             const cardStatus = document.getElementById('cardStatus');
             const accountStatus = document.getElementById('accountStatus');
+            const historyCount = document.getElementById('historyCount');
 
             if (balanceDisplay) balanceDisplay.innerText = balance;
+            if (historyCount) historyCount.innerText = `${history.length} 筆紀錄`;
             
             if (card) {
                 if (balance < 0) {
@@ -170,8 +221,8 @@
             list.innerHTML = history.slice().reverse().map(item => `
                 <div class="history-item">
                     <div>
-                        <div class="${item.type === 'deposit' ? 'item-dep' : 'item-with'}">${item.desc}</div>
-                        <div class="item-time">${item.time}</div>
+                        <div class="item-title">${item.title || item.desc}</div>
+                        <div class="item-time">${item.date || ''} ${item.time || ''}</div>
                     </div>
                     <div class="${item.type === 'deposit' ? 'item-dep' : 'item-with'}">
                         ${item.type === 'deposit' ? '+' : '-'}${item.amount} m
@@ -181,21 +232,27 @@
         }
 
         function addFocusManual() {
+            const nameInput = document.getElementById('focusNameInput');
             const input = document.getElementById('focusInput');
+            const name = nameInput.value.trim() || '專注項目';
             const val = parseInt(input.value);
             if (isNaN(val) || val <= 0) {
-                alert('請先在框內輸入有效的數字（分鐘數）！');
+                alert('請先輸入有效的專注分鐘數！');
                 return;
             }
             const earned = Math.floor(val / 5);
             balance += earned;
+            const now = new Date();
             history.push({
                 type: 'deposit',
+                title: `專注：${name} (${val}m)`,
                 desc: `專注 ${val} 分鐘 (換算儲值)`,
                 amount: earned,
-                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             });
             input.value = '';
+            nameInput.value = '';
             updateUI();
         }
 
@@ -205,20 +262,26 @@
         }
 
         function addEntertainmentManual() {
+            const nameInput = document.getElementById('entNameInput');
             const input = document.getElementById('entertainmentInput');
+            const name = nameInput.value.trim() || '娛樂消費';
             const val = parseInt(input.value);
             if (isNaN(val) || val <= 0) {
-                alert('請先在框內輸入有效的數字（分鐘數）！');
+                alert('請先輸入有效的娛樂分鐘數！');
                 return;
             }
             balance -= val;
+            const now = new Date();
             history.push({
                 type: 'withdraw',
+                title: `娛樂：${name}`,
                 desc: `娛樂消費`,
                 amount: val,
-                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             });
             input.value = '';
+            nameInput.value = '';
             updateUI();
         }
 
@@ -227,34 +290,7 @@
             addEntertainmentManual();
         }
 
-        // 精準解析 CSV 時間 logic
-        function parseDurationToMinutes(str) {
-            if (!str) return 0;
-            str = str.toString().trim();
-            
-            // 格式: HH:MM:SS 或 MM:SS
-            if (str.includes(':')) {
-                const parts = str.split(':').map(Number);
-                if (parts.length === 3) return (parts[0] * 60) + parts[1] + Math.round(parts[2]/60);
-                if (parts.length === 2) return parts[0] + Math.round(parts[1]/60);
-            }
-            
-            // 格式: 1h 30m / 90m
-            let total = 0;
-            const hMatch = str.match(/(\d+)\s*(h|時|小時)/i);
-            const mMatch = str.match(/(\d+)\s*(m|分|分鐘)/i);
-            if (hMatch) total += parseInt(hMatch[1]) * 60;
-            if (mMatch) total += parseInt(mMatch[1]);
-            if (total > 0) return total;
-
-            // 純數字（過濾掉年份如 2024, 2025, 2026）
-            const num = parseInt(str);
-            if (!isNaN(num) && (num < 1900 || num > 2099)) {
-                return num;
-            }
-            return 0;
-        }
-
+        // 1. Tomatodo 報表細化解讀邏輯 (拆解每一個單獨項目)
         function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -263,47 +299,154 @@
             reader.onload = function(evt) {
                 const text = evt.target.result;
                 const lines = text.split(/\r\n|\n/);
-                let totalMins = 0;
+                let addedCount = 0;
+                let totalEarned = 0;
 
-                if (lines.length > 0) {
-                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                    // 尋找目標時間欄位索引
-                    let targetColIndex = headers.findIndex(h => 
-                        h.includes('duration') || h.includes('minute') || h.includes('time') || 
-                        h.includes('時長') || h.includes('時間') || h.includes('分鐘')
-                    );
+                lines.forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 3) {
+                        const timeStr = parts[0] ? parts[0].trim() : '';
+                        const taskName = parts[1] ? parts[1].trim() : '專注待辦';
+                        const duration = parseInt(parts[2].trim());
+                        const status = parts[4] ? parts[4].trim() : '';
 
-                    lines.forEach((line, idx) => {
-                        if (idx === 0) return; // 跳過標題列
-                        const cols = line.split(',');
-                        if (targetColIndex !== -1 && cols[targetColIndex]) {
-                            totalMins += parseDurationToMinutes(cols[targetColIndex]);
-                        } else {
-                            // 若無標題列匹配，逐個檢查非日期數字
-                            cols.forEach(cell => {
-                                const m = parseDurationToMinutes(cell);
-                                if (m > 0 && m < 1440) totalMins += m;
-                            });
+                        if (!isNaN(duration) && duration > 0 && duration < 1440) {
+                            if (status === '' || status.includes('完成')) {
+                                const earned = Math.floor(duration / 5);
+                                totalEarned += earned;
+                                balance += earned;
+                                addedCount++;
+
+                                // 提取日期
+                                let dateMatch = timeStr.match(/(\d{4}-\d{2}-\d{2})/);
+                                let recordDate = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
+
+                                history.push({
+                                    type: 'deposit',
+                                    title: `專注：${taskName} (${duration}m)`,
+                                    desc: `完成 ${taskName}`,
+                                    amount: earned,
+                                    date: recordDate,
+                                    time: 'Tomatodo 匯入'
+                                });
+                            }
                         }
-                    });
-                }
+                    }
+                });
 
-                if (totalMins > 0) {
-                    const earned = Math.floor(totalMins / 5);
-                    balance += earned;
-                    history.push({
-                        type: 'deposit',
-                        desc: `匯入報表專注 ${totalMins} 分鐘`,
-                        amount: earned,
-                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                    });
-                    alert(`成功匯入！精準解析出 ${totalMins} 分鐘專注時間，已按 5:1 自動儲值 ${earned} 分鐘娛樂額度。`);
+                if (addedCount > 0) {
+                    alert(`✅ 成功解讀 Tomatodo 報表！\n\n已為你細化拆解出 ${addedCount} 筆專注項目，共獲得 ${totalEarned} 分鐘娛樂獎勵！`);
                     updateUI();
                 } else {
-                    alert('無法從檔案中解析出正確的時間欄位，請使用畫面上的「手動輸入專注時間」進行儲值。');
+                    alert('❌ 無法解析檔案內容，請確認是否為 Tomatodo 匯出的 .xls 報表。');
                 }
             };
             reader.readAsText(file);
+        }
+
+        // 2. 螢幕使用時間截圖 OCR 辨識邏輯
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const ocrStatus = document.getElementById('ocrStatus');
+            ocrStatus.classList.remove('hidden');
+            ocrStatus.innerText = '🔍 OCR AI 正在掃描螢幕截圖中的娛樂時間...';
+
+            Tesseract.recognize(
+                file,
+                'chi_sim+eng',
+                { logger: m => console.log(m) }
+            ).then(({ data: { text } }) => {
+                ocrStatus.classList.add('hidden');
+                parseScreenTimeOCR(text);
+            }).catch(err => {
+                ocrStatus.classList.add('hidden');
+                alert('截圖辨識失敗，請改用手動輸入娛樂時間。');
+            });
+        }
+
+        function parseScreenTimeOCR(text) {
+            // 搜尋常見娛樂 App 關鍵字
+            const appList = ['YouTube', 'Instagram', 'IG', 'TikTok', 'Facebook', 'FB', 'Netflix', 'Bilibili', '小紅書', '抖音', 'Safari', 'Chrome'];
+            let foundLogs = [];
+            let totalDetectedMins = 0;
+
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                appList.forEach(app => {
+                    if (line.toLowerCase().includes(app.toLowerCase())) {
+                        // 尋找行內的時間 (例如 45m, 1h 20m, 45 分鐘)
+                        let hMatch = line.match(/(\d+)\s*(?:h|小時)/i);
+                        let mMatch = line.match(/(\d+)\s*(?:m|分|分鐘)/i);
+                        let h = hMatch ? parseInt(hMatch[1]) : 0;
+                        let m = mMatch ? parseInt(mMatch[1]) : 0;
+                        let total = (h * 60) + m;
+                        if (total > 0 && total < 1440) {
+                            foundLogs.push(`${app}: ${total}分鐘`);
+                            totalDetectedMins += total;
+                        }
+                    }
+                });
+            });
+
+            if (totalDetectedMins > 0) {
+                if (confirm(`📸 截圖辨識成功！\n\n偵測到娛樂項目：\n${foundLogs.join('\n')}\n\n總計使用時間：${totalDetectedMins} 分鐘。\n是否確認從帳戶中扣除？`)) {
+                    balance -= totalDetectedMins;
+                    const now = new Date();
+                    history.push({
+                        type: 'withdraw',
+                        title: `截圖扣款：${foundLogs.join(', ')}`,
+                        desc: `螢幕時間截圖自動扣除`,
+                        amount: totalDetectedMins,
+                        date: now.toISOString().split('T')[0],
+                        time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                    updateUI();
+                }
+            } else {
+                alert('📸 未能在截圖中找到明顯的娛樂 App 使用時間數字，請嘗試手動輸入。');
+            }
+        }
+
+        // 3. 安全管理與按日期重設 Modal 控制
+        function openResetModal() {
+            document.getElementById('resetModal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetModal').classList.add('hidden');
+        }
+
+        function clearHistoryBeforeDate() {
+            const dateVal = document.getElementById('resetBeforeDate').value;
+            if (!dateVal) {
+                alert('請先選擇要清理的指定日期！');
+                return;
+            }
+            if (confirm(`⚠️ 確定要清除 ${dateVal} 之前的所有舊歷史紀錄嗎？\n\n注意：這不會影響你當前的娛樂可用餘額/透支狀態！`)) {
+                const initialCount = history.length;
+                history = history.filter(item => {
+                    if (!item.date) return true;
+                    return item.date >= dateVal;
+                });
+                const clearedCount = initialCount - history.length;
+                alert(`✅ 已成功清理 ${clearedCount} 筆在 ${dateVal} 之前的舊歷史明細！`);
+                closeResetModal();
+                updateUI();
+            }
+        }
+
+        function fullResetAccount() {
+            if (confirm("🚨 第一重確認：你確定要徹底清空所有歷史明細，並將娛樂餘額歸零嗎？")) {
+                if (confirm("🚨 第二重確認：此操作無法復原，確定要執行完全重設？")) {
+                    balance = 0;
+                    history = [];
+                    closeResetModal();
+                    updateUI();
+                    alert("已完成完全重設！");
+                }
+            }
         }
 
         function showTab(type) {
@@ -322,14 +465,6 @@
                 pWith.classList.remove('hidden');
                 btnWith.className = "tab-btn tab-active-with";
                 btnDep.className = "tab-btn tab-inactive";
-            }
-        }
-
-        function resetData() {
-            if (confirm("確定要清空並重設所有紀錄嗎？")) {
-                balance = 0;
-                history = [];
-                updateUI();
             }
         }
 

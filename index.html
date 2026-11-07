@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Time Bank 信用卡 v3.6</title>
+    <title>Time Bank 信用卡 v3.8</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -30,11 +30,10 @@
         .card-unit { font-size: 13px; color: #94a3b8; margin-left: 4px; }
         .card-footer { display: flex; justify-content: space-between; margin-top: 16px; font-size: 10px; font-family: monospace; color: #94a3b8; }
         
-        .tab-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-        .tab-btn { padding: 10px; border-radius: 10px; font-weight: bold; border: none; cursor: pointer; font-size: 13px; }
-        .tab-active-dep { background-color: #059669; color: white; }
-        .tab-active-with { background-color: #e11d48; color: white; }
-        .tab-inactive { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        /* 四分頁選單設計 */
+        .main-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 16px; background: #1e293b; padding: 4px; border-radius: 12px; border: 1px solid #334155; }
+        .main-tab-btn { padding: 8px 2px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 11px; background: transparent; color: #94a3b8; text-align: center; }
+        .main-tab-btn.active { background: #059669; color: white; }
         
         .panel { background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; padding: 14px; border-radius: 12px; margin-bottom: 12px; }
         .panel-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #cbd5e1; }
@@ -69,9 +68,9 @@
     <header>
         <div>
             <h1>💳 時間銀行 Time Bank</h1>
-            <div class="sub-title">自訂換算比例 ＋ 黑白名單 (v3.6)</div>
+            <div class="sub-title">雙向審計確認 ＋ 分頁化介面 (v3.8)</div>
         </div>
-        <button onclick="openResetModal()" class="btn-reset">⚙️ 比例與名單設定</button>
+        <button onclick="openSettingsModal()" class="btn-reset">⚙️ 設定</button>
     </header>
 
     <!-- 信用卡卡片 -->
@@ -95,19 +94,32 @@
         </div>
     </div>
 
-    <!-- 頁籤按鈕 -->
-    <div class="tab-group">
-        <button id="btnTabDep" onclick="showTab('deposit')" class="tab-btn tab-active-dep">➕ 專注儲值 (存款)</button>
-        <button id="btnTabWith" onclick="showTab('withdraw')" class="tab-btn tab-inactive">➖ 娛樂消費 (扣款)</button>
+    <!-- 主頁面分頁按鈕 (Tabs) -->
+    <div class="main-tabs">
+        <button id="tabBtnMain" onclick="switchMainTab('main')" class="main-tab-btn active">📊 帳單明細</button>
+        <button id="tabBtnDep" onclick="switchMainTab('deposit')" class="main-tab-btn">➕ 專注儲值</button>
+        <button id="tabBtnWith" onclick="switchMainTab('withdraw')" class="main-tab-btn">➖ 娛樂扣款</button>
+        <button id="tabBtnSet" onclick="openSettingsModal()" class="main-tab-btn">⚙️ 系統設定</button>
     </div>
 
-    <!-- 面板 1：存款 (CSV 檔案匯入) -->
-    <div id="panelDeposit">
+    <!-- 頁面 1：帳單與明細總覽 -->
+    <div id="pageMain" class="space-y-4">
+        <div>
+            <div class="history-title">
+                <span>詳細交易帳單明細</span>
+                <span id="historyCount" style="font-weight:normal; font-size:10px;">0 筆紀錄</span>
+            </div>
+            <div id="historyList" class="history-list"></div>
+        </div>
+    </div>
+
+    <!-- 頁面 2：專注儲值 (含確認審計 Modal) -->
+    <div id="pageDeposit" class="hidden">
         <div class="panel">
             <div class="panel-title">📁 匯入 CSV 專注時間報表</div>
-            <input type="file" id="csvFileInput" accept=".csv,text/csv,text/*" onchange="handleCSVUpload(event)">
+            <input type="file" id="csvFileInput" accept=".csv,text/csv,text/*" onchange="previewCSVUpload(event)">
             <div style="font-size:10px; color:#94a3b8; margin-top:6px;">
-                請選擇另存新檔後的 `.csv` 報表，系統會按目前設定的匯率比例自動換算儲值。
+                上傳 `.csv` 報表後將跳出審計確認視窗，可核對後再存入。
             </div>
         </div>
 
@@ -116,54 +128,74 @@
             <div class="input-group">
                 <input type="text" id="focusNameInput" placeholder="項目名稱 (例如：溫數學)">
                 <input type="number" id="focusInput" placeholder="專注分鐘數 (例如：180)">
-                <button onclick="addFocusManual()" class="btn-action btn-dep">換算儲值</button>
+                <button onclick="previewManualFocus()" class="btn-action btn-dep">預覽並確認儲值</button>
             </div>
         </div>
     </div>
 
-    <!-- 面板 2：扣款 -->
-    <div id="panelWithdraw" class="hidden">
+    <!-- 頁面 3：娛樂扣款 -->
+    <div id="pageWithdraw" class="hidden">
         <div class="panel">
-            <div class="panel-title">📸 螢幕使用時間截圖 (防作弊劃扣)</div>
+            <div class="panel-title">📸 螢幕使用時間截圖 (審計扣款)</div>
             <input type="file" id="imgFileInput" accept="image/*" onchange="handleImageUpload(event)">
-            <div id="ocrStatus" class="ocr-status hidden">🔍 AI 正在辨識螢幕使用時間...</div>
+            <div id="ocrStatus" class="ocr-status hidden">🔍 AI 正在解析截圖，請稍候...</div>
             <div style="font-size:10px; color:#94a3b8; margin-top:6px;">
-                🎵 系統會自動豁免 <span style="color:#38bdf8;">YouTube Music</span> 等白名單項目，只扣除黑名單娛樂時間。
+                🎵 自動過濾 YouTube Music 等白名單，上傳後彈出預覽確認框！
             </div>
         </div>
     </div>
 
-    <!-- 歷史紀錄 -->
-    <div>
-        <div class="history-title">
-            <span>詳細交易明細</span>
-            <span id="historyCount" style="font-weight:normal; font-size:10px;">0 筆紀錄</span>
+    <!-- 專注存款審計確認 Modal -->
+    <div id="depositPreviewModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 style="font-size:16px; font-weight:bold; margin-bottom:8px; color:#34d399;">📥 專注存款審計與確認預覽</h3>
+            <p style="font-size:11px; color:#cbd5e1; margin-bottom:12px;">請核對以下專注時間與換算後的娛樂額度。可直接修改或刪除：</p>
+            
+            <div id="depositPreviewListContainer" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px; max-height:200px; overflow-y:auto;"></div>
+            
+            <button onclick="confirmAndDeposit()" style="width:100%; padding:10px; background:#059669; color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; margin-bottom:8px;">
+                ✅ 確認無誤，正式存入帳戶
+            </button>
+            <button onclick="closeDepositPreviewModal()" style="width:100%; padding:8px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
+                取消並放棄
+            </button>
         </div>
-        <div id="historyList" class="history-list"></div>
     </div>
 
-    <!-- 管理、比例與名單設定 Modal -->
-    <div id="resetModal" class="modal hidden">
+    <!-- 截圖預覽確認 Modal -->
+    <div id="previewModal" class="modal hidden">
         <div class="modal-content">
-            <!-- 匯率/比例設定 -->
+            <h3 style="font-size:16px; font-weight:bold; margin-bottom:8px; color:#f43f5e;">📝 扣款審計與確認預覽</h3>
+            <p style="font-size:11px; color:#cbd5e1; margin-bottom:12px;">AI 掃描到以下娛樂項目。如有誤判，可手動修改或刪除：</p>
+            
+            <div id="previewListContainer" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px; max-height:200px; overflow-y:auto;"></div>
+            
+            <button onclick="confirmAndDeduct()" style="width:100%; padding:10px; background:#e11d48; color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; margin-bottom:8px;">
+                ✅ 確認無誤，執行劃扣
+            </button>
+            <button onclick="closePreviewModal()" style="width:100%; padding:8px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
+                取消並放棄
+            </button>
+        </div>
+    </div>
+
+    <!-- 設定與管理 Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
             <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#f59e0b;">💱 專注與娛樂換算比例 (Ratio)</h3>
             <div style="margin-bottom:14px; background:#0f172a; padding:10px; border-radius:8px;">
                 <label style="font-size:11px; color:#cbd5e1; display:block; margin-bottom:6px;">設定 (專注時間 : 換得娛樂時間)：</label>
-                <div style="display:flex; gap:6px;">
-                    <select id="ratioSelect" onchange="changeRatio(this.value)" style="padding:6px; font-size:12px;">
-                        <option value="1">1 : 1 (節假日放鬆 / 高獎勵)</option>
-                        <option value="2">2 : 1 (專注 2 分鐘換 1 分鐘)</option>
-                        <option value="5" selected>5 : 1 (日常標準 - 20% 獎勵)</option>
-                        <option value="10">10 : 1 (嚴格控管 - 10% 獎勵)</option>
-                    </select>
-                </div>
-                <div style="font-size:10px; color:#64748b; margin-top:4px;">例如設為 5:1 時，專注 100 分鐘可換取 20 分鐘娛樂。</div>
+                <select id="ratioSelect" onchange="changeRatio(this.value)" style="padding:6px; font-size:12px;">
+                    <option value="1">1 : 1 (節假日放鬆 / 高獎勵)</option>
+                    <option value="2">2 : 1 (專注 2 分鐘換 1 分鐘)</option>
+                    <option value="5" selected>5 : 1 (日常標準 - 20% 獎勵)</option>
+                    <option value="10">10 : 1 (嚴格控管 - 10% 獎勵)</option>
+                </select>
             </div>
 
-            <!-- 黑白名單設定 -->
             <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#38bdf8; border-top:1px solid #334155; padding-top:10px;">🏷️ 動態黑白名單設定</h3>
             <div style="margin-bottom:10px; background:#0f172a; padding:10px; border-radius:8px;">
-                <label style="font-size:11px; color:#38bdf8; font-weight:bold;">🎵 免扣分白名單 (例如: YouTube Music)</label>
+                <label style="font-size:11px; color:#38bdf8; font-weight:bold;">🎵 免扣分白名單</label>
                 <div style="display:flex; gap:6px; margin-top:4px;">
                     <input type="text" id="newWhiteInput" placeholder="輸入 App 名稱" style="padding:4px 8px; font-size:12px;">
                     <button onclick="addWhiteListApp()" style="padding:4px 10px; background:#0284c7; color:white; border:none; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">新增</button>
@@ -172,7 +204,7 @@
             </div>
 
             <div style="margin-bottom:14px; background:#0f172a; padding:10px; border-radius:8px;">
-                <label style="font-size:11px; color:#f43f5e; font-weight:bold;">🚨 嚴格劃扣黑名單 (例如: YouTube, IG)</label>
+                <label style="font-size:11px; color:#f43f5e; font-weight:bold;">🚨 嚴格劃扣黑名單</label>
                 <div style="display:flex; gap:6px; margin-top:4px;">
                     <input type="text" id="newBlackInput" placeholder="輸入 App 名稱" style="padding:4px 8px; font-size:12px;">
                     <button onclick="addBlackListApp()" style="padding:4px 10px; background:#be123c; color:white; border:none; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">新增</button>
@@ -180,7 +212,6 @@
                 <div id="blackListTags" class="tag-container"></div>
             </div>
 
-            <!-- 同步與備份 -->
             <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#34d399; border-top:1px solid #334155; padding-top:10px;">☁️ 跨裝置同步 (手機 ⇄ iPad)</h3>
             <div style="display:flex; gap:8px; margin-bottom:12px;">
                 <button onclick="exportDataJSON()" style="flex:1; padding:6px; background:#059669; color:white; border:none; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">📤 匯出備份</button>
@@ -189,7 +220,6 @@
                 </label>
             </div>
 
-            <!-- 清除歷史與重設 -->
             <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#f87171; border-top:1px solid #334155; padding-top:10px;">⚠️ 歷史紀錄與重設</h3>
             <div style="margin-bottom:8px;">
                 <input type="date" id="resetBeforeDate" style="padding:4px 8px; font-size:11px;">
@@ -201,8 +231,8 @@
             <button onclick="fullResetAccount()" style="width:100%; padding:6px; background:#7f1d1d; border:1px solid #991b1b; color:white; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-top:4px;">
                 🔥 完全清空所有資料與餘額
             </button>
-            <button onclick="closeResetModal()" style="width:100%; margin-top:8px; padding:6px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
-                關閉
+            <button onclick="closeSettingsModal()" style="width:100%; margin-top:8px; padding:6px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
+                關閉設定
             </button>
         </div>
     </div>
@@ -210,10 +240,13 @@
     <script>
         let balance = parseInt(localStorage.getItem('tb_balance')) || 0;
         let history = JSON.parse(localStorage.getItem('tb_history')) || [];
-        let conversionRatio = parseInt(localStorage.getItem('tb_ratio')) || 5; // 預設 5:1
+        let conversionRatio = parseInt(localStorage.getItem('tb_ratio')) || 5;
         
         let whitelist = JSON.parse(localStorage.getItem('tb_whitelist')) || ['YouTube Music', 'YT Music', 'Spotify', 'Apple Music', 'GoodNotes', 'Notion', 'Anki', 'ScreenZen'];
         let blacklist = JSON.parse(localStorage.getItem('tb_blacklist')) || ['YouTube', 'Instagram', 'TikTok', 'Facebook', 'Netflix', 'Bilibili', 'Twitch'];
+
+        let pendingDeposits = [];
+        let pendingDeductions = [];
 
         function updateUI() {
             const balanceDisplay = document.getElementById('balanceDisplay');
@@ -256,6 +289,31 @@
         function changeRatio(val) {
             conversionRatio = parseInt(val) || 5;
             updateUI();
+        }
+
+        function switchMainTab(tab) {
+            if (tab === 'set') {
+                openSettingsModal();
+                return;
+            }
+            document.getElementById('pageMain').classList.add('hidden');
+            document.getElementById('pageDeposit').classList.add('hidden');
+            document.getElementById('pageWithdraw').classList.add('hidden');
+
+            document.getElementById('tabBtnMain').className = "main-tab-btn";
+            document.getElementById('tabBtnDep').className = "main-tab-btn";
+            document.getElementById('tabBtnWith').className = "main-tab-btn";
+
+            if (tab === 'main') {
+                document.getElementById('pageMain').classList.remove('hidden');
+                document.getElementById('tabBtnMain').className = "main-tab-btn active";
+            } else if (tab === 'deposit') {
+                document.getElementById('pageDeposit').classList.remove('hidden');
+                document.getElementById('tabBtnDep').className = "main-tab-btn active";
+            } else if (tab === 'withdraw') {
+                document.getElementById('pageWithdraw').classList.remove('hidden');
+                document.getElementById('tabBtnWith').className = "main-tab-btn active";
+            }
         }
 
         function renderHistory() {
@@ -301,42 +359,25 @@
 
         function addWhiteListApp() {
             const val = document.getElementById('newWhiteInput').value.trim();
-            if (val && !whitelist.includes(val)) {
-                whitelist.push(val);
-                document.getElementById('newWhiteInput').value = '';
-                updateUI();
-            }
+            if (val && !whitelist.includes(val)) { whitelist.push(val); document.getElementById('newWhiteInput').value = ''; updateUI(); }
         }
-
-        function removeWhiteApp(idx) {
-            whitelist.splice(idx, 1);
-            updateUI();
-        }
+        function removeWhiteApp(idx) { whitelist.splice(idx, 1); updateUI(); }
 
         function addBlackListApp() {
             const val = document.getElementById('newBlackInput').value.trim();
-            if (val && !blacklist.includes(val)) {
-                blacklist.push(val);
-                document.getElementById('newBlackInput').value = '';
-                updateUI();
-            }
+            if (val && !blacklist.includes(val)) { blacklist.push(val); document.getElementById('newBlackInput').value = ''; updateUI(); }
         }
+        function removeBlackApp(idx) { blacklist.splice(idx, 1); updateUI(); }
 
-        function removeBlackApp(idx) {
-            blacklist.splice(idx, 1);
-            updateUI();
-        }
-
-        // CSV 檔案匯入（按動態 conversionRatio 換算）
-        function handleCSVUpload(e) {
+        // CSV 專注預覽審計
+        function previewCSVUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const text = evt.target.result;
-                let addedCount = 0;
-                let totalEarned = 0;
+                pendingDeposits = [];
 
                 const lines = text.split(/\r\n|\n/);
                 lines.forEach(line => {
@@ -349,65 +390,112 @@
 
                         if (!isNaN(duration) && duration > 0 && duration < 1440 && taskName !== '' && taskName !== '待辦名稱') {
                             if (status === '' || status.includes('完成')) {
-                                const earned = Math.floor(duration / conversionRatio);
-                                totalEarned += earned;
-                                balance += earned;
-                                addedCount++;
-
                                 let dateMatch = timeStr.match(/(\d{4}-\d{2}-\d{2})/);
                                 let recordDate = dateMatch ? dateMatch[1] : new Date().toISOString().split('T')[0];
 
-                                history.push({
-                                    type: 'deposit',
-                                    title: `專注：${taskName} (${duration}m)`,
-                                    desc: `完成 ${taskName}`,
-                                    amount: earned,
-                                    date: recordDate,
-                                    time: `CSV 匯入 (${conversionRatio}:1)`
-                                });
+                                pendingDeposits.push({ name: taskName, duration: duration, date: recordDate });
                             }
                         }
                     }
                 });
 
-                if (addedCount > 0) {
-                    alert(`✅ 成功匯入 CSV 報表！\n\n已拆解出 ${addedCount} 筆專注項目，按照 ${conversionRatio}:1 比例，共儲值 ${totalEarned} 分鐘娛樂額度！`);
-                    updateUI();
+                if (pendingDeposits.length > 0) {
+                    renderDepositPreviewModal();
+                    document.getElementById('depositPreviewModal').classList.remove('hidden');
                 } else {
-                    alert('❌ 無法在 CSV 檔案中讀取專注項目，請確認格式。');
+                    alert('❌ 無法在 CSV 檔案中讀取有效的專注項目。');
                 }
             };
             reader.readAsText(file);
         }
 
-        function addFocusManual() {
+        function previewManualFocus() {
             const nameInput = document.getElementById('focusNameInput');
             const input = document.getElementById('focusInput');
-            const name = nameInput.value.trim() || '專注項目';
+            const name = nameInput.value.trim() || '手動專注';
             const val = parseInt(input.value);
             if (isNaN(val) || val <= 0) { alert('請先輸入有效的專注分鐘數！'); return; }
-            const earned = Math.floor(val / conversionRatio);
-            balance += earned;
-            const now = new Date();
-            history.push({
-                type: 'deposit',
-                title: `專注：${name} (${val}m)`,
-                desc: `專注 ${val} 分鐘`,
-                amount: earned,
-                date: now.toISOString().split('T')[0],
-                time: `${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} (${conversionRatio}:1)`
-            });
+
+            pendingDeposits = [{ name: name, duration: val, date: new Date().toISOString().split('T')[0] }];
+            renderDepositPreviewModal();
+            document.getElementById('depositPreviewModal').classList.remove('hidden');
             input.value = ''; nameInput.value = '';
-            updateUI();
         }
 
+        function renderDepositPreviewModal() {
+            const container = document.getElementById('depositPreviewListContainer');
+            container.innerHTML = pendingDeposits.map((item, idx) => {
+                let earned = Math.floor(item.duration / conversionRatio);
+                return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px; border-radius:6px; border:1px solid #334155;">
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#f1f5f9;">${item.name}</div>
+                            <div style="font-size:10px; color:#94a3b8;">專注 ${item.duration}m ➔ 可得 <span style="color:#34d399; font-weight:bold;">+${earned}m</span> (${conversionRatio}:1)</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <input type="number" value="${item.duration}" onchange="updatePendingDepositDuration(${idx}, this.value)" style="width:65px; padding:4px; font-size:12px; text-align:center;">
+                            <span style="font-size:10px; color:#94a3b8;">m</span>
+                            <button onclick="removePendingDeposit(${idx})" style="background:none; border:none; color:#f43f5e; font-weight:bold; cursor:pointer; margin-left:4px;">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updatePendingDepositDuration(idx, val) {
+            pendingDeposits[idx].duration = parseInt(val) || 0;
+            renderDepositPreviewModal();
+        }
+
+        function removePendingDeposit(idx) {
+            pendingDeposits.splice(idx, 1);
+            renderDepositPreviewModal();
+        }
+
+        function closeDepositPreviewModal() {
+            document.getElementById('depositPreviewModal').classList.add('hidden');
+            pendingDeposits = [];
+        }
+
+        function confirmAndDeposit() {
+            let totalEarned = 0;
+            let addedCount = 0;
+
+            pendingDeposits.forEach(item => {
+                let earned = Math.floor(item.duration / conversionRatio);
+                if (earned > 0) {
+                    totalEarned += earned;
+                    addedCount++;
+                    history.push({
+                        type: 'deposit',
+                        title: `專注：${item.name} (${item.duration}m)`,
+                        desc: `完成 ${item.name}`,
+                        amount: earned,
+                        date: item.date,
+                        time: `審計入帳 (${conversionRatio}:1)`
+                    });
+                }
+            });
+
+            if (totalEarned > 0) {
+                balance += totalEarned;
+                closeDepositPreviewModal();
+                updateUI();
+                switchMainTab('main');
+                alert(`✅ 審計成功！共存入 ${addedCount} 筆項目，獲得 +${totalEarned} 分鐘娛樂額度！`);
+            } else {
+                alert('沒有有效的存款項目可存入。');
+            }
+        }
+
+        // 截圖扣款預覽
         function handleImageUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const ocrStatus = document.getElementById('ocrStatus');
             ocrStatus.classList.remove('hidden');
-            ocrStatus.innerText = '🔍 AI 正在辨識螢幕使用時間...';
+            ocrStatus.innerText = '🔍 AI 正在解析截圖，請稍候...';
 
             Tesseract.recognize(
                 file,
@@ -415,18 +503,16 @@
                 { logger: m => console.log(m) }
             ).then(({ data: { text } }) => {
                 ocrStatus.classList.add('hidden');
-                parseScreenTime(text);
+                preparePreviewDeductions(text);
             }).catch(err => {
                 ocrStatus.classList.add('hidden');
                 alert('截圖辨識失敗，請確認圖片清晰度。');
             });
         }
 
-        function parseScreenTime(rawText) {
+        function preparePreviewDeductions(rawText) {
             const lines = rawText.split('\n');
-            let detectedDeductions = [];
-            let whitelistedLogs = [];
-            let totalDeductMins = 0;
+            pendingDeductions = [];
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
@@ -439,37 +525,58 @@
                 let mins = extractMinutesFromLine(timeLine) || extractMinutesFromLine(line);
 
                 if (matchedWhite && mins > 0) {
-                    whitelistedLogs.push(`🎵 ${matchedWhite}: ${mins}分鐘 (豁免)`);
+                    // 白名單豁免
                 } else if (matchedBlack && mins > 0) {
-                    detectedDeductions.push(`${matchedBlack}: ${mins}分鐘`);
-                    totalDeductMins += mins;
+                    pendingDeductions.push({ name: matchedBlack, mins: mins });
                 }
             }
 
-            let msg = "📸 螢幕時間截圖解析結果：\n\n";
-            
-            if (whitelistedLogs.length > 0) {
-                msg += "【✅ 白名單豁免項目 (不扣分)】\n" + whitelistedLogs.join('\n') + "\n\n";
-            }
-
-            if (totalDeductMins > 0) {
-                msg += "【🚨 偵測到的娛樂消費】\n" + detectedDeductions.join('\n') + `\n\n總計劃扣：${totalDeductMins} 分鐘。`;
-                if (confirm(msg + "\n\n是否確認從帳戶劃扣？")) {
-                    balance -= totalDeductMins;
-                    const now = new Date();
-                    history.push({
-                        type: 'withdraw',
-                        title: `截圖劃扣：${detectedDeductions.join(', ')}`,
-                        desc: `螢幕時間截圖劃扣`,
-                        amount: totalDeductMins,
-                        date: now.toISOString().split('T')[0],
-                        time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                    });
-                    updateUI();
-                }
+            if (pendingDeductions.length > 0) {
+                renderPreviewModal();
+                document.getElementById('previewModal').classList.remove('hidden');
             } else {
-                alert(msg + "🎉 未在截圖中找到黑名單娛樂時間！（YouTube Music 已自動豁免）");
+                alert('🎉 未在截圖中偵測到任何黑名單娛樂時間！（白名單已自動豁免）');
             }
+        }
+
+        function renderPreviewModal() {
+            const container = document.getElementById('previewListContainer');
+            container.innerHTML = pendingDeductions.map((item, idx) => `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px; border-radius:6px; border:1px solid #334155;">
+                    <span style="font-size:12px; font-weight:bold; color:#f87171;">${item.name}</span>
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="number" value="${item.mins}" onchange="updatePendingMins(${idx}, this.value)" style="width:70px; padding:4px; font-size:12px; text-align:center;">
+                        <span style="font-size:11px; color:#94a3b8;">分鐘</span>
+                        <button onclick="removePendingItem(${idx})" style="background:none; border:none; color:#f43f5e; font-weight:bold; cursor:pointer; margin-left:6px;">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePendingMins(idx, val) { pendingDeductions[idx].mins = parseInt(val) || 0; }
+        function removePendingItem(idx) { pendingDeductions.splice(idx, 1); renderPreviewModal(); }
+        function closePreviewModal() { document.getElementById('previewModal').classList.add('hidden'); pendingDeductions = []; }
+
+        function confirmAndDeduct() {
+            let totalDeductMins = pendingDeductions.reduce((sum, item) => sum + item.mins, 0);
+            if (totalDeductMins <= 0) { alert('沒有需要扣除的分鐘數。'); closePreviewModal(); return; }
+
+            let summaryNames = pendingDeductions.map(i => `${i.name} ${i.mins}m`).join(', ');
+            balance -= totalDeductMins;
+            const now = new Date();
+            history.push({
+                type: 'withdraw',
+                title: `截圖劃扣：${summaryNames}`,
+                desc: `螢幕截圖審計扣款`,
+                amount: totalDeductMins,
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+
+            closePreviewModal();
+            updateUI();
+            switchMainTab('main');
+            alert(`✅ 成功扣除 ${totalDeductMins} 分鐘娛樂額度！`);
         }
 
         function extractMinutesFromLine(line) {
@@ -505,16 +612,16 @@
                         if (parsed.whitelist) whitelist = parsed.whitelist;
                         if (parsed.blacklist) blacklist = parsed.blacklist;
                         updateUI();
-                        alert("✅ 成功還原備份資料、換算比例與名單設定！");
-                        closeResetModal();
+                        alert("✅ 成功還原備份資料與設定！");
+                        closeSettingsModal();
                     }
                 } catch(err) { alert("❌ 解析備份檔案失敗。"); }
             };
             reader.readAsText(file);
         }
 
-        function openResetModal() { document.getElementById('resetModal').classList.remove('hidden'); }
-        function closeResetModal() { document.getElementById('resetModal').classList.add('hidden'); }
+        function openSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); }
+        function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
 
         function clearHistoryBeforeDate() {
             const dateVal = document.getElementById('resetBeforeDate').value;
@@ -523,7 +630,7 @@
                 const initialCount = history.length;
                 history = history.filter(item => !item.date || item.date >= dateVal);
                 alert(`✅ 已成功清理 ${initialCount - history.length} 筆舊歷史！`);
-                closeResetModal();
+                closeSettingsModal();
                 updateUI();
             }
         }
@@ -532,28 +639,9 @@
             if (confirm("🚨 確定要徹底清空所有歷史與餘額嗎？")) {
                 balance = 0;
                 history = [];
-                closeResetModal();
+                closeSettingsModal();
                 updateUI();
                 alert("已完成重設！");
-            }
-        }
-
-        function showTab(type) {
-            const pDep = document.getElementById('panelDeposit');
-            const pWith = document.getElementById('panelWithdraw');
-            const btnDep = document.getElementById('btnTabDep');
-            const btnWith = document.getElementById('btnTabWith');
-
-            if (type === 'deposit') {
-                pDep.classList.remove('hidden');
-                pWith.classList.add('hidden');
-                btnDep.className = "tab-btn tab-active-dep";
-                btnWith.className = "tab-btn tab-inactive";
-            } else {
-                pDep.classList.add('hidden');
-                pWith.classList.remove('hidden');
-                btnWith.className = "tab-btn tab-active-with";
-                btnDep.className = "tab-btn tab-inactive";
             }
         }
 

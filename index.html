@@ -16,7 +16,6 @@
         .sub-title { font-size: 12px; color: #94a3b8; }
         .btn-reset { background: none; border: none; color: #64748b; font-size: 12px; cursor: pointer; }
         
-        /* 信用卡樣式 */
         .card { border-radius: 16px; padding: 24px; margin-bottom: 20px; transition: all 0.3s ease; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
         .card-credit { background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); border: 1px solid #065f46; }
         .card-debt { background: linear-gradient(135deg, #7f1d1d 0%, #451a03 100%); border: 1px solid #991b1b; }
@@ -29,14 +28,12 @@
         .card-unit { font-size: 14px; color: #94a3b8; margin-left: 4px; }
         .card-footer { display: flex; justify-content: space-between; margin-top: 20px; font-size: 11px; font-family: monospace; color: #94a3b8; }
         
-        /* 切換按鈕 */
         .tab-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
         .tab-btn { padding: 12px; border-radius: 12px; font-weight: bold; border: none; cursor: pointer; font-size: 14px; }
         .tab-active-dep { background-color: #059669; color: white; }
         .tab-active-with { background-color: #e11d48; color: white; }
         .tab-inactive { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; }
         
-        /* 表單與面板 */
         .panel { background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
         .panel-title { font-size: 13px; font-weight: bold; margin-bottom: 10px; color: #cbd5e1; }
         .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -48,7 +45,6 @@
         .quick-btns { display: flex; gap: 8px; }
         .btn-quick { background-color: #334155; border: 1px solid #475569; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; flex: 1; }
         
-        /* 明細列表 */
         .history-title { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
         .history-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         .history-item { display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 8px; border: 1px solid #334155; font-size: 12px; }
@@ -68,7 +64,6 @@
         <button onclick="resetData()" class="btn-reset">重設資料</button>
     </header>
 
-    <!-- 信用卡卡片 -->
     <div id="card" class="card card-credit">
         <div class="card-top">
             <div>
@@ -89,13 +84,11 @@
         </div>
     </div>
 
-    <!-- 頁籤按鈕 -->
     <div class="tab-group">
         <button id="btnTabDep" onclick="showTab('deposit')" class="tab-btn tab-active-dep">➕ 專注儲值 (存款)</button>
         <button id="btnTabWith" onclick="showTab('withdraw')" class="tab-btn tab-inactive">➖ 娛樂消費 (扣款)</button>
     </div>
 
-    <!-- 面板 1：存款 -->
     <div id="panelDeposit">
         <div class="panel">
             <div class="panel-title">📁 匯入番茄鐘 CSV / Excel 報表</div>
@@ -116,7 +109,6 @@
         </div>
     </div>
 
-    <!-- 面板 2：扣款 -->
     <div id="panelWithdraw" class="hidden">
         <div class="panel">
             <div class="panel-title">🎬 輸入使用娛樂 App 的總分鐘數</div>
@@ -132,7 +124,6 @@
         </div>
     </div>
 
-    <!-- 歷史紀錄 -->
     <div>
         <div class="history-title">交易帳單明細</div>
         <div id="historyList" class="history-list"></div>
@@ -236,6 +227,34 @@
             addEntertainmentManual();
         }
 
+        // 精準解析 CSV 時間 logic
+        function parseDurationToMinutes(str) {
+            if (!str) return 0;
+            str = str.toString().trim();
+            
+            // 格式: HH:MM:SS 或 MM:SS
+            if (str.includes(':')) {
+                const parts = str.split(':').map(Number);
+                if (parts.length === 3) return (parts[0] * 60) + parts[1] + Math.round(parts[2]/60);
+                if (parts.length === 2) return parts[0] + Math.round(parts[1]/60);
+            }
+            
+            // 格式: 1h 30m / 90m
+            let total = 0;
+            const hMatch = str.match(/(\d+)\s*(h|時|小時)/i);
+            const mMatch = str.match(/(\d+)\s*(m|分|分鐘)/i);
+            if (hMatch) total += parseInt(hMatch[1]) * 60;
+            if (mMatch) total += parseInt(mMatch[1]);
+            if (total > 0) return total;
+
+            // 純數字（過濾掉年份如 2024, 2025, 2026）
+            const num = parseInt(str);
+            if (!isNaN(num) && (num < 1900 || num > 2099)) {
+                return num;
+            }
+            return 0;
+        }
+
         function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -243,27 +262,45 @@
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const text = evt.target.result;
-                const numbers = text.match(/\d+/g);
-                if (numbers && numbers.length > 0) {
-                    let totalMins = 0;
-                    numbers.forEach(n => {
-                        let num = parseInt(n);
-                        if (num > 0 && num < 1440) totalMins += num;
+                const lines = text.split(/\r\n|\n/);
+                let totalMins = 0;
+
+                if (lines.length > 0) {
+                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                    // 尋找目標時間欄位索引
+                    let targetColIndex = headers.findIndex(h => 
+                        h.includes('duration') || h.includes('minute') || h.includes('time') || 
+                        h.includes('時長') || h.includes('時間') || h.includes('分鐘')
+                    );
+
+                    lines.forEach((line, idx) => {
+                        if (idx === 0) return; // 跳過標題列
+                        const cols = line.split(',');
+                        if (targetColIndex !== -1 && cols[targetColIndex]) {
+                            totalMins += parseDurationToMinutes(cols[targetColIndex]);
+                        } else {
+                            // 若無標題列匹配，逐個檢查非日期數字
+                            cols.forEach(cell => {
+                                const m = parseDurationToMinutes(cell);
+                                if (m > 0 && m < 1440) totalMins += m;
+                            });
+                        }
                     });
-                    if (totalMins > 0) {
-                        const earned = Math.floor(totalMins / 5);
-                        balance += earned;
-                        history.push({
-                            type: 'deposit',
-                            desc: `匯入報表專注 ${totalMins} 分鐘`,
-                            amount: earned,
-                            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                        });
-                        alert(`成功匯入報表！解析共 ${totalMins} 分鐘專注，已按 5:1 自動儲值 ${earned} 分鐘。`);
-                        updateUI();
-                    }
+                }
+
+                if (totalMins > 0) {
+                    const earned = Math.floor(totalMins / 5);
+                    balance += earned;
+                    history.push({
+                        type: 'deposit',
+                        desc: `匯入報表專注 ${totalMins} 分鐘`,
+                        amount: earned,
+                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                    alert(`成功匯入！精準解析出 ${totalMins} 分鐘專注時間，已按 5:1 自動儲值 ${earned} 分鐘娛樂額度。`);
+                    updateUI();
                 } else {
-                    alert('無法從檔案中讀取到時間數字，請直接使用手動輸入！');
+                    alert('無法從檔案中解析出正確的時間欄位，請使用畫面上的「手動輸入專注時間」進行儲值。');
                 }
             };
             reader.readAsText(file);
@@ -296,7 +333,6 @@
             }
         }
 
-        // 初始化載入 UI
         window.onload = function() {
             updateUI();
         };

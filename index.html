@@ -3,22 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Time Bank 信用卡 v3.1</title>
+    <title>Time Bank 信用卡 v3.4</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f172a">
-    <!-- 引入 OCR 截圖辨識庫 -->
+    <!-- OCR 辨識庫 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <!-- 引入 SheetJS 專門解析真實 .xls / .xlsx 檔案 -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; padding: 16px; max-width: 480px; margin: 0 auto; min-height: 100vh; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         h1 { font-size: 18px; font-weight: bold; color: #10b981; }
         .sub-title { font-size: 11px; color: #94a3b8; }
-        .btn-reset { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+        .btn-reset { background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #60a5fa; font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
         
         .card { border-radius: 16px; padding: 20px; margin-bottom: 16px; transition: all 0.3s ease; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); }
         .card-credit { background: linear-gradient(135deg, #064e3b 0%, #022c22 100%); border: 1px solid #065f46; }
@@ -41,13 +39,17 @@
         .panel { background-color: rgba(30, 41, 59, 0.8); border: 1px solid #334155; padding: 14px; border-radius: 12px; margin-bottom: 12px; }
         .panel-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #cbd5e1; }
         .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-        input[type="text"], input[type="number"], input[type="file"], input[type="date"] { width: 100%; background-color: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none; }
-        input[type="number"]:focus, input[type="text"]:focus { border-color: #10b981; }
+        input[type="text"], input[type="number"], textarea, input[type="date"] { width: 100%; background-color: #0f172a; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 13px; outline: none; }
+        textarea { height: 60px; resize: none; font-family: monospace; font-size: 11px; }
         .btn-action { padding: 10px; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; cursor: pointer; text-align: center; }
         .btn-dep { background-color: #059669; color: white; }
         .btn-with { background-color: #e11d48; color: white; }
-        .quick-btns { display: flex; gap: 6px; }
-        .btn-quick { background-color: #334155; border: 1px solid #475569; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; flex: 1; }
+        
+        .tag-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .tag-item { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; }
+        .tag-white { background-color: #0369a1; color: #e0f2fe; border: 1px solid #0284c7; }
+        .tag-black { background-color: #9f1239; color: #ffe4e6; border: 1px solid #be123c; }
+        .tag-del { cursor: pointer; margin-left: 2px; color: #f43f5e; font-weight: bold; }
         
         .history-title { font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; }
         .history-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
@@ -57,10 +59,10 @@
         .item-title { font-weight: 600; color: #f1f5f9; }
         .item-time { font-size: 10px; color: #64748b; margin-top: 2px; }
         .hidden { display: none !important; }
-        .ocr-status { font-size: 11px; color: #38bdf8; margin-top: 6px; }
+        .ocr-status { font-size: 11px; color: #38bdf8; margin-top: 6px; font-weight: bold; }
         
         .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 100; }
-        .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 20px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 12px; padding: 20px; width: 90%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body>
@@ -68,9 +70,9 @@
     <header>
         <div>
             <h1>💳 時間銀行 Time Bank</h1>
-            <div class="sub-title">XLS 智慧解析 ＋ 跨裝置同步</div>
+            <div class="sub-title">Samsung 截圖適配 ＋ 網頁動態黑白名單 (5:1)</div>
         </div>
-        <button onclick="openResetModal()" class="btn-reset">⚙️ 管理與同步</button>
+        <button onclick="openResetModal()" class="btn-reset">⚙️ 名單設定與管理</button>
     </header>
 
     <!-- 信用卡卡片 -->
@@ -103,22 +105,17 @@
     <!-- 面板 1：存款 -->
     <div id="panelDeposit">
         <div class="panel">
-            <div class="panel-title">📁 直接上傳 Tomatodo .xls / .csv 報表</div>
-            <input type="file" id="csvFileInput" accept=".xls,.xlsx,.csv,text/*" onchange="handleExcelUpload(event)">
-            <div style="font-size:10px; color:#64748b; margin-top:4px;">支援直接讀取 Tomatodo 原始 .xls 格式，自動細化拆解項目！</div>
+            <div class="panel-title">📋 貼上 Tomatodo 內文一鍵儲值</div>
+            <textarea id="tomatodoPasteArea" placeholder="複製 Tomatodo 的 .xls / CSV 內容貼到這裡..."></textarea>
+            <button onclick="parsePastedTomatodo()" class="btn-action btn-dep" style="width:100%; margin-top:6px;">解析內文並儲值</button>
         </div>
 
         <div class="panel">
-            <div class="panel-title">✍️ 手動輸入專注項目</div>
+            <div class="panel-title">✍️ 手動輸入單筆專注</div>
             <div class="input-group">
                 <input type="text" id="focusNameInput" placeholder="項目名稱 (例如：溫數學)">
                 <input type="number" id="focusInput" placeholder="專注分鐘數 (例如：180)">
                 <button onclick="addFocusManual()" class="btn-action btn-dep">換算儲值</button>
-            </div>
-            <div class="quick-btns">
-                <button onclick="quickAddFocus(30)" class="btn-quick">+30分</button>
-                <button onclick="quickAddFocus(60)" class="btn-quick">+1小時</button>
-                <button onclick="quickAddFocus(180)" class="btn-quick">+3小時</button>
             </div>
         </div>
     </div>
@@ -126,22 +123,11 @@
     <!-- 面板 2：扣款 -->
     <div id="panelWithdraw" class="hidden">
         <div class="panel">
-            <div class="panel-title">📸 自動解析螢幕使用時間截圖</div>
+            <div class="panel-title">📸 螢幕使用時間截圖 (防作弊辨識)</div>
             <input type="file" id="imgFileInput" accept="image/*" onchange="handleImageUpload(event)">
-            <div id="ocrStatus" class="ocr-status hidden">正在掃描截圖中的娛樂時間...</div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-title">🎬 手動輸入娛樂消費</div>
-            <div class="input-group">
-                <input type="text" id="entNameInput" placeholder="娛樂項目 (例如：YouTube / IG)">
-                <input type="number" id="entertainmentInput" placeholder="使用分鐘數 (例如：45)">
-                <button onclick="addEntertainmentManual()" class="btn-action btn-with">進行扣除</button>
-            </div>
-            <div class="quick-btns">
-                <button onclick="quickAddEnt(15)" class="btn-quick">-15分</button>
-                <button onclick="quickAddEnt(30)" class="btn-quick">-30分</button>
-                <button onclick="quickAddEnt(60)" class="btn-quick">-1小時</button>
+            <div id="ocrStatus" class="ocr-status hidden">🔍 正在辨識 Samsung 螢幕使用時間截圖...</div>
+            <div style="font-size:10px; color:#94a3b8; margin-top:6px;">
+                🎵 系統會自動過濾 <span style="color:#38bdf8;">YouTube Music</span> 等白名單，只扣除黑名單娛樂時間。
             </div>
         </div>
     </div>
@@ -155,31 +141,52 @@
         <div id="historyList" class="history-list"></div>
     </div>
 
-    <!-- 管理與同步 Modal -->
+    <!-- 管理與名單設定 Modal -->
     <div id="resetModal" class="modal hidden">
         <div class="modal-content">
-            <h3 style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#34d399;">☁️ 跨裝置同步 (手機 ⇄ iPad)</h3>
-            <p style="font-size:11px; color:#cbd5e1; margin-bottom:12px;">將手機資料匯出成備份檔，再透過 Airdrop 傳到 iPad 匯入，即可雙向同步帳戶！</p>
-            <div style="display:flex; gap:8px; margin-bottom:16px;">
-                <button onclick="exportDataJSON()" style="flex:1; padding:8px; background:#059669; color:white; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📤 匯出備份</button>
-                <label style="flex:1; padding:8px; background:#334155; color:white; border:1px solid #475569; border-radius:6px; font-size:12px; font-weight:bold; text-align:center; cursor:pointer;">
+            <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#38bdf8;">🏷️ 網頁內動態黑白名單設定</h3>
+            <p style="font-size:11px; color:#cbd5e1; margin-bottom:10px;">直接在下方新增/移除 App，瀏覽器會自動記憶，不需更改程式碼！</p>
+            
+            <!-- 白名單設定 -->
+            <div style="margin-bottom:12px; background:#0f172a; padding:10px; border-radius:8px;">
+                <label style="font-size:11px; color:#38bdf8; font-weight:bold;">🎵 免扣分白名單 (例如: YouTube Music)</label>
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                    <input type="text" id="newWhiteInput" placeholder="輸入 App 名稱" style="padding:4px 8px; font-size:12px;">
+                    <button onclick="addWhiteListApp()" style="padding:4px 10px; background:#0284c7; color:white; border:none; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">新增</button>
+                </div>
+                <div id="whiteListTags" class="tag-container"></div>
+            </div>
+
+            <!-- 黑名單設定 -->
+            <div style="margin-bottom:16px; background:#0f172a; padding:10px; border-radius:8px;">
+                <label style="font-size:11px; color:#f43f5e; font-weight:bold;">🚨 嚴格劃扣黑名單 (例如: YouTube, IG)</label>
+                <div style="display:flex; gap:6px; margin-top:4px;">
+                    <input type="text" id="newBlackInput" placeholder="輸入 App 名稱" style="padding:4px 8px; font-size:12px;">
+                    <button onclick="addBlackListApp()" style="padding:4px 10px; background:#be123c; color:white; border:none; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">新增</button>
+                </div>
+                <div id="blackListTags" class="tag-container"></div>
+            </div>
+
+            <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#34d399; border-top:1px solid #334155; padding-top:10px;">☁️ 跨裝置同步 (手機 ⇄ iPad)</h3>
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button onclick="exportDataJSON()" style="flex:1; padding:6px; background:#059669; color:white; border:none; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">📤 匯出備份</button>
+                <label style="flex:1; padding:6px; background:#334155; color:white; border:1px solid #475569; border-radius:6px; font-size:11px; font-weight:bold; text-align:center; cursor:pointer;">
                     📥 還原備份 <input type="file" accept=".json" onchange="importDataJSON(event)" style="display:none;">
                 </label>
             </div>
 
-            <h3 style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#f87171; border-top:1px solid #334155; padding-top:12px;">⚠️ 歷史紀錄與重設管理</h3>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:4px;">清理此日期之前的舊明細：</label>
-                <input type="date" id="resetBeforeDate">
-                <button onclick="clearHistoryBeforeDate()" style="width:100%; margin-top:6px; padding:8px; background:#334155; border:1px solid #475569; color:white; border-radius:6px; font-size:11px; cursor:pointer;">
-                    🗑️ 清除該日期前的舊歷史 (保留當前餘額)
+            <h3 style="font-size:15px; font-weight:bold; margin-bottom:8px; color:#f87171; border-top:1px solid #334155; padding-top:10px;">⚠️ 歷史紀錄與重設</h3>
+            <div style="margin-bottom:8px;">
+                <input type="date" id="resetBeforeDate" style="padding:4px 8px; font-size:11px;">
+                <button onclick="clearHistoryBeforeDate()" style="width:100%; margin-top:4px; padding:6px; background:#334155; border:1px solid #475569; color:white; border-radius:6px; font-size:11px; cursor:pointer;">
+                    🗑️ 清除該日期前的舊歷史 (保留餘額)
                 </button>
             </div>
             
-            <button onclick="fullResetAccount()" style="width:100%; padding:8px; background:#7f1d1d; border:1px solid #991b1b; color:white; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-top:8px;">
+            <button onclick="fullResetAccount()" style="width:100%; padding:6px; background:#7f1d1d; border:1px solid #991b1b; color:white; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-top:4px;">
                 🔥 完全清空所有資料與餘額
             </button>
-            <button onclick="closeResetModal()" style="width:100%; margin-top:10px; padding:8px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
+            <button onclick="closeResetModal()" style="width:100%; margin-top:8px; padding:6px; background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer;">
                 關閉
             </button>
         </div>
@@ -188,6 +195,10 @@
     <script>
         let balance = parseInt(localStorage.getItem('tb_balance')) || 0;
         let history = JSON.parse(localStorage.getItem('tb_history')) || [];
+        
+        // 可選白名單與黑名單 (儲存於 localStorage)
+        let whitelist = JSON.parse(localStorage.getItem('tb_whitelist')) || ['YouTube Music', 'YT Music', 'Spotify', 'Apple Music', 'GoodNotes', 'Notion', 'Anki', 'ScreenZen'];
+        let blacklist = JSON.parse(localStorage.getItem('tb_blacklist')) || ['YouTube', 'Instagram', 'TikTok', 'Facebook', 'Netflix', 'Bilibili', 'Twitch'];
 
         function updateUI() {
             const balanceDisplay = document.getElementById('balanceDisplay');
@@ -215,7 +226,11 @@
 
             localStorage.setItem('tb_balance', balance);
             localStorage.setItem('tb_history', JSON.stringify(history));
+            localStorage.setItem('tb_whitelist', JSON.stringify(whitelist));
+            localStorage.setItem('tb_blacklist', JSON.stringify(blacklist));
+            
             renderHistory();
+            renderListTags();
         }
 
         function renderHistory() {
@@ -238,146 +253,72 @@
             `).join('');
         }
 
-        function addFocusManual() {
-            const nameInput = document.getElementById('focusNameInput');
-            const input = document.getElementById('focusInput');
-            const name = nameInput.value.trim() || '專注項目';
-            const val = parseInt(input.value);
-            if (isNaN(val) || val <= 0) {
-                alert('請先輸入有效的專注分鐘數！');
-                return;
+        function renderListTags() {
+            const wContainer = document.getElementById('whiteListTags');
+            const bContainer = document.getElementById('blackListTags');
+            
+            if (wContainer) {
+                wContainer.innerHTML = whitelist.map((app, idx) => `
+                    <span class="tag-item tag-white">
+                        ${app} <span class="tag-del" onclick="removeWhiteApp(${idx})">×</span>
+                    </span>
+                `).join('');
             }
-            const earned = Math.floor(val / 5);
-            balance += earned;
-            const now = new Date();
-            history.push({
-                type: 'deposit',
-                title: `專注：${name} (${val}m)`,
-                desc: `專注 ${val} 分鐘 (換算儲值)`,
-                amount: earned,
-                date: now.toISOString().split('T')[0],
-                time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            });
-            input.value = '';
-            nameInput.value = '';
+            
+            if (bContainer) {
+                bContainer.innerHTML = blacklist.map((app, idx) => `
+                    <span class="tag-item tag-black">
+                        ${app} <span class="tag-del" onclick="removeBlackApp(${idx})">×</span>
+                    </span>
+                `).join('');
+            }
+        }
+
+        function addWhiteListApp() {
+            const val = document.getElementById('newWhiteInput').value.trim();
+            if (val && !whitelist.includes(val)) {
+                whitelist.push(val);
+                document.getElementById('newWhiteInput').value = '';
+                updateUI();
+            }
+        }
+
+        function removeWhiteApp(idx) {
+            whitelist.splice(idx, 1);
             updateUI();
         }
 
-        function quickAddFocus(mins) {
-            document.getElementById('focusInput').value = mins;
-            addFocusManual();
+        function addBlackListApp() {
+            const val = document.getElementById('newBlackInput').value.trim();
+            if (val && !blacklist.includes(val)) {
+                blacklist.push(val);
+                document.getElementById('newBlackInput').value = '';
+                updateUI();
+            }
         }
 
-        function addEntertainmentManual() {
-            const nameInput = document.getElementById('entNameInput');
-            const input = document.getElementById('entertainmentInput');
-            const name = nameInput.value.trim() || '娛樂消費';
-            const val = parseInt(input.value);
-            if (isNaN(val) || val <= 0) {
-                alert('請先輸入有效的娛樂分鐘數！');
-                return;
-            }
-            balance -= val;
-            const now = new Date();
-            history.push({
-                type: 'withdraw',
-                title: `娛樂：${name}`,
-                desc: `娛樂消費`,
-                amount: val,
-                date: now.toISOString().split('T')[0],
-                time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            });
-            input.value = '';
-            nameInput.value = '';
+        function removeBlackApp(idx) {
+            blacklist.splice(idx, 1);
             updateUI();
         }
 
-        function quickAddEnt(mins) {
-            document.getElementById('entertainmentInput').value = mins;
-            addEntertainmentManual();
-        }
+        function parsePastedTomatodo() {
+            const text = document.getElementById('tomatodoPasteArea').value;
+            if (!text.trim()) { alert('請先把 Tomatodo 內文貼在框框裡！'); return; }
 
-        // 使用 SheetJS 支援直接上傳真實 .xls / .xlsx 檔案與 CSV
-        function handleExcelUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-                    let addedCount = 0;
-                    let totalEarned = 0;
-
-                    jsonRows.forEach(row => {
-                        // 尋找包含任務名稱與分鐘數的列
-                        if (row.length >= 3) {
-                            let taskName = row[1] ? row[1].toString().trim() : '';
-                            let duration = parseInt(row[2]);
-                            let status = row[4] ? row[4].toString().trim() : '';
-
-                            // 排除標題列並驗證數值
-                            if (!isNaN(duration) && duration > 0 && duration < 1440 && taskName !== '' && taskName !== '待辦名稱') {
-                                if (status === '' || status.includes('完成')) {
-                                    const earned = Math.floor(duration / 5);
-                                    totalEarned += earned;
-                                    balance += earned;
-                                    addedCount++;
-
-                                    let recordDate = new Date().toISOString().split('T')[0];
-                                    if (row[0] && row[0].toString().includes('-')) {
-                                        let dateMatch = row[0].toString().match(/(\d{4}-\d{2}-\d{2})/);
-                                        if (dateMatch) recordDate = dateMatch[1];
-                                    }
-
-                                    history.push({
-                                        type: 'deposit',
-                                        title: `專注：${taskName} (${duration}m)`,
-                                        desc: `完成 ${taskName}`,
-                                        amount: earned,
-                                        date: recordDate,
-                                        time: 'XLS 匯入'
-                                    });
-                                }
-                            }
-                        }
-                    });
-
-                    if (addedCount > 0) {
-                        alert(`✅ 成功完美解析 Tomatodo XLS 報表！\n\n已拆解出 ${addedCount} 筆專注項目，共自動儲值 ${totalEarned} 分鐘娛樂額度！`);
-                        updateUI();
-                    } else {
-                        // 備用：如果是純文字格式嘗試用文字解讀
-                        handleTextFallback(evt.target.result);
-                    }
-                } catch (err) {
-                    // 如果二進位解析失敗，轉為文字模式解析
-                    let textDecoder = new TextDecoder("utf-8");
-                    handleTextFallback(textDecoder.decode(evt.target.result));
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function handleTextFallback(text) {
-            const lines = text.split(/\r\n|\n/);
             let addedCount = 0;
             let totalEarned = 0;
+            const lines = text.split(/\r\n|\n/);
 
             lines.forEach(line => {
                 const parts = line.split(',');
                 if (parts.length >= 3) {
                     const timeStr = parts[0] ? parts[0].trim() : '';
-                    const taskName = parts[1] ? parts[1].trim() : '專注待辦';
+                    const taskName = parts[1] ? parts[1].trim() : '';
                     const duration = parseInt(parts[2].trim());
                     const status = parts[4] ? parts[4].trim() : '';
 
-                    if (!isNaN(duration) && duration > 0 && duration < 1440) {
+                    if (!isNaN(duration) && duration > 0 && duration < 1440 && taskName !== '' && taskName !== '待辦名稱') {
                         if (status === '' || status.includes('完成')) {
                             const earned = Math.floor(duration / 5);
                             totalEarned += earned;
@@ -393,7 +334,7 @@
                                 desc: `完成 ${taskName}`,
                                 amount: earned,
                                 date: recordDate,
-                                time: '報表匯入'
+                                time: 'Tomatodo 貼上'
                             });
                         }
                     }
@@ -401,16 +342,119 @@
             });
 
             if (addedCount > 0) {
-                alert(`✅ 成功解讀報表！\n\n拆解出 ${addedCount} 筆專注項目，獲得 ${totalEarned} 分鐘娛樂額度！`);
+                alert(`✅ 成功解析內文！\n\n已細化拆解出 ${addedCount} 筆專注項目，共自動儲值 ${totalEarned} 分鐘娛樂額度！`);
+                document.getElementById('tomatodoPasteArea').value = '';
                 updateUI();
             } else {
-                alert('❌ 無法解析檔案，請確認是否為 Tomatodo 報表。');
+                alert('❌ 無法在貼上的文字中找到專注項目，請確認是否全選複製了 Tomatodo 內容。');
             }
         }
 
-        // 跨裝置同步：JSON 匯出與匯入
+        function addFocusManual() {
+            const nameInput = document.getElementById('focusNameInput');
+            const input = document.getElementById('focusInput');
+            const name = nameInput.value.trim() || '專注項目';
+            const val = parseInt(input.value);
+            if (isNaN(val) || val <= 0) { alert('請先輸入有效的專注分鐘數！'); return; }
+            const earned = Math.floor(val / 5);
+            balance += earned;
+            const now = new Date();
+            history.push({
+                type: 'deposit',
+                title: `專注：${name} (${val}m)`,
+                desc: `專注 ${val} 分鐘`,
+                amount: earned,
+                date: now.toISOString().split('T')[0],
+                time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            input.value = ''; nameInput.value = '';
+            updateUI();
+        }
+
+        // Samsung 截圖專用辨識邏輯
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const ocrStatus = document.getElementById('ocrStatus');
+            ocrStatus.classList.remove('hidden');
+            ocrStatus.innerText = '🔍 AI 正在辨識 Samsung 螢幕使用時間...';
+
+            Tesseract.recognize(
+                file,
+                'chi_tra+chi_sim+eng',
+                { logger: m => console.log(m) }
+            ).then(({ data: { text } }) => {
+                ocrStatus.classList.add('hidden');
+                parseSamsungScreenTime(text);
+            }).catch(err => {
+                ocrStatus.classList.add('hidden');
+                alert('截圖辨識失敗，請確認圖片清晰度。');
+            });
+        }
+
+        function parseSamsungScreenTime(rawText) {
+            const lines = rawText.split('\n');
+            let detectedDeductions = [];
+            let whitelistedLogs = [];
+            let totalDeductMins = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                let lowerLine = line.toLowerCase();
+
+                // 檢查是否有 App 匹配
+                let matchedWhite = whitelist.find(w => lowerLine.includes(w.toLowerCase()));
+                let matchedBlack = blacklist.find(b => lowerLine.includes(b.toLowerCase()));
+
+                // 尋找下一行或本行中的時間數字 (例如 "螢幕使用 1 小時 15 分鐘" 或 "螢幕開啟 16 分鐘")
+                let timeLine = (i + 1 < lines.length) ? lines[i + 1] : line;
+                let mins = extractMinutesFromSamsungLine(timeLine) || extractMinutesFromSamsungLine(line);
+
+                if (matchedWhite && mins > 0) {
+                    whitelistedLogs.push(`🎵 ${matchedWhite}: ${mins}分鐘 (豁免)`);
+                } else if (matchedBlack && mins > 0) {
+                    detectedDeductions.push(`${matchedBlack}: ${mins}分鐘`);
+                    totalDeductMins += mins;
+                }
+            }
+
+            let msg = "📸 Samsung 螢幕時間截圖解析結果：\n\n";
+            
+            if (whitelistedLogs.length > 0) {
+                msg += "【✅ 白名單豁免項目 (不扣分)】\n" + whitelistedLogs.join('\n') + "\n\n";
+            }
+
+            if (totalDeductMins > 0) {
+                msg += "【🚨 偵測到的娛樂消費】\n" + detectedDeductions.join('\n') + `\n\n總計劃扣：${totalDeductMins} 分鐘。`;
+                if (confirm(msg + "\n\n是否確認從帳戶劃扣？")) {
+                    balance -= totalDeductMins;
+                    const now = new Date();
+                    history.push({
+                        type: 'withdraw',
+                        title: `截圖劃扣：${detectedDeductions.join(', ')}`,
+                        desc: `螢幕時間截圖劃扣`,
+                        amount: totalDeductMins,
+                        date: now.toISOString().split('T')[0],
+                        time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    });
+                    updateUI();
+                }
+            } else {
+                alert(msg + "🎉 未在截圖中找到黑名單娛樂時間！（YouTube Music 已自動豁免）");
+            }
+        }
+
+        function extractMinutesFromSamsungLine(line) {
+            let hMatch = line.match(/(\d+)\s*(?:小時|h)/i);
+            let mMatch = line.match(/(\d+)\s*(?:分鐘|分|m)/i);
+            let h = hMatch ? parseInt(hMatch[1]) : 0;
+            let m = mMatch ? parseInt(mMatch[1]) : 0;
+            return (h * 60) + m;
+        }
+
         function exportDataJSON() {
-            const dataObj = { balance: balance, history: history };
+            const dataObj = { balance: balance, history: history, whitelist: whitelist, blacklist: blacklist };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataObj));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
@@ -430,80 +474,15 @@
                     if (parsed.balance !== undefined && parsed.history !== undefined) {
                         balance = parsed.balance;
                         history = parsed.history;
+                        if (parsed.whitelist) whitelist = parsed.whitelist;
+                        if (parsed.blacklist) blacklist = parsed.blacklist;
                         updateUI();
-                        alert("✅ 成功還原備份資料！裝置已同步完成。");
+                        alert("✅ 成功還原備份資料與黑白名單設定！");
                         closeResetModal();
-                    } else {
-                        alert("❌ 備份檔案格式不正確。");
                     }
-                } catch(err) {
-                    alert("❌ 解析備份檔案失敗。");
-                }
+                } catch(err) { alert("❌ 解析備份檔案失敗。"); }
             };
             reader.readAsText(file);
-        }
-
-        // 螢幕使用時間截圖 OCR 辨識
-        function handleImageUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const ocrStatus = document.getElementById('ocrStatus');
-            ocrStatus.classList.remove('hidden');
-            ocrStatus.innerText = '🔍 OCR AI 正在掃描截圖中的娛樂時間...';
-
-            Tesseract.recognize(
-                file,
-                'chi_sim+eng',
-                { logger: m => console.log(m) }
-            ).then(({ data: { text } }) => {
-                ocrStatus.classList.add('hidden');
-                parseScreenTimeOCR(text);
-            }).catch(err => {
-                ocrStatus.classList.add('hidden');
-                alert('截圖辨識失敗，請改用手動輸入。');
-            });
-        }
-
-        function parseScreenTimeOCR(text) {
-            const appList = ['YouTube', 'Instagram', 'IG', 'TikTok', 'Facebook', 'FB', 'Netflix', 'Bilibili', '小紅書', '抖音', 'Safari', 'Chrome'];
-            let foundLogs = [];
-            let totalDetectedMins = 0;
-
-            const lines = text.split('\n');
-            lines.forEach(line => {
-                appList.forEach(app => {
-                    if (line.toLowerCase().includes(app.toLowerCase())) {
-                        let hMatch = line.match(/(\d+)\s*(?:h|小時)/i);
-                        let mMatch = line.match(/(\d+)\s*(?:m|分|分鐘)/i);
-                        let h = hMatch ? parseInt(hMatch[1]) : 0;
-                        let m = mMatch ? parseInt(mMatch[1]) : 0;
-                        let total = (h * 60) + m;
-                        if (total > 0 && total < 1440) {
-                            foundLogs.push(`${app}: ${total}分鐘`);
-                            totalDetectedMins += total;
-                        }
-                    }
-                });
-            });
-
-            if (totalDetectedMins > 0) {
-                if (confirm(`📸 截圖辨識成功！\n\n偵測到項目：\n${foundLogs.join('\n')}\n\n總計使用：${totalDetectedMins} 分鐘。\n是否確認從帳戶中扣除？`)) {
-                    balance -= totalDetectedMins;
-                    const now = new Date();
-                    history.push({
-                        type: 'withdraw',
-                        title: `截圖扣款：${foundLogs.join(', ')}`,
-                        desc: `螢幕時間截圖自動扣除`,
-                        amount: totalDetectedMins,
-                        date: now.toISOString().split('T')[0],
-                        time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                    });
-                    updateUI();
-                }
-            } else {
-                alert('📸 未能在截圖中找到明顯的娛樂時間數字，請嘗試手動輸入。');
-            }
         }
 
         function openResetModal() { document.getElementById('resetModal').classList.remove('hidden'); }
